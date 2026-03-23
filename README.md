@@ -1,118 +1,40 @@
 # AI-Adventurer 全端系統
 
-本文件負責**說明**這個全端子系統是什麼、解決什麼問題、包含哪些能力，以及如何快速啟動。
+AI-Adventurer 是一個姿態互動冒險遊戲原型，包含前端互動介面與後端 API 服務。
 
-## 1. 專案概述
+## 1. 主要功能
 
-AI-Adventurer 全端系統負責承接來自感測端 / Edge AI 端的動作事件，並在 PC 端完成：
+- 首頁流程：開始遊戲、姿態校正、玩法說明
+- 遊戲主畫面：
+  - 玩家狀態（血量血條、分數、遊戲階段）
+  - 劇情顯示與目標動作提示
+  - 剩餘時間顯示
+- 設定面板：Dark Mode 切換、Debug 模式切換
+- Debug 模式：顯示 debug 資訊與 Demo Event 注入工具
+- 後端 API：遊戲狀態、事件輸入、劇情生成、系統健康檢查
 
-- 遊戲狀態管理
-- 劇情 / 敘事生成
-- 事件判定與回饋
-- 前端互動介面顯示
-- 日誌與除錯資訊輸出
+## 2. 快速開始
 
-## 2. 系統功能
-
-### 核心功能
-
-- **Game Manager**：管理章節、事件、玩家狀態與回合流程
-- **Event Judge**：依據目標動作、時間限制與辨識結果判定成功 / 失敗
-- **Story Service**：根據章節背景、關鍵詞與事件結果生成敘事文字
-- **Frontend UI**：顯示遊戲畫面、玩家狀態、目標動作、倒數計時與敘事內容
-- **Gateway / API**：與 Edge AI 端或其他服務交換資料
-- **Logger**：記錄事件流、判定結果與錯誤資訊
-
-### 展示目標
-
-- 即時顯示當前劇情與狀態
-- 即時回應玩家動作結果
-- 在失敗 / 成功後呈現對應敘事回饋
-- 支援現場 demo 的穩定啟動流程
-
-## 3. 使用情境
-
-### 主要流程
-
-1. 玩家開始遊戲
-2. 前端顯示章節背景與劇情
-3. 後端從事件池抽取事件
-4. Edge AI 端回傳動作分數 / 穩定動作
-5. Event Judge 判定是否在時限內完成指定動作
-6. Game Manager 更新生命值 / 分數 / 關卡狀態
-7. Story Service 生成成功或失敗敘事
-8. 前端顯示新的狀態與文字
-
-### 典型使用者
-
-- 玩家
-- 展示人員 / 評審
-- 開發者 / 維護者
-
-## 4. 技術棧
-
-### 前端
-
-- **Framework**: React 19.2.0
-- **Language**: TypeScript
-- **UI**: Radix UI + Tailwind CSS + Shadcn
-- **State Management**: React Hooks
-- **Build Tool**: Vite 7.3.1
-
-### 後端
-
-- **Framework**: Flask 3.x
-- **Language**: Python
-- **Package Manager**: uv
-
-## 5. 專案結構
-
-```text
-AI-Adventurer/
-├── frontend/                 # 前端應用
-│   ├── src/
-│   │   ├── api/              # API 函式
-│   │   ├── pages/            # 頁面級模組
-│   │   ├── components/       # 共用元件
-│   │   ├── hooks/            # 共用 hooks
-│   │   │   ├── queries/         # 查詢 hooks
-│   │   │   ├── mutations/       # 變更 hooks
-│   │   │   ├── useQuery.ts      # Query 共通封裝
-│   │   │   └── useMutation.ts   # Mutation 共通封裝
-│   │   ├── lib/              # API / utils
-│   │   ├── types/            # 全域型別
-│   │   └── main.tsx
-│   └── public/
-├── backend/                  # 後端應用
-│   ├── app/                  # 應用主體
-│   │   ├── routes/           # HTTP / WS 路由
-│   │   ├── services/         # 業務邏輯
-│   │   ├── domain/           # 遊戲規則 / 領域模型
-│   │   ├── integrations/     # LLM / Edge AI / 外部服務
-│   │   ├── middleware/       # 中間件
-│   │   └── utils/            # 工具函式
-│   ├── tests/
-│   └── main.py
-├── README.md                 # 說明文件
-├── spec.md                   # 約束文件
-├── architecture.md           # 實作文件
-├── docker-compose.yml
-└── .env.example
-```
-
-## 6. 快速開始
-
-### 使用 Docker Compose
+### 2.1 使用 Docker Compose（開發）
 
 ```bash
-cp .env.example .env
-
 docker compose up --build
 ```
 
-### 本機開發
+啟動後：
 
-#### Frontend
+- Frontend: http://localhost:5173
+- Backend: http://localhost:8000
+
+停止服務：
+
+```bash
+docker compose down
+```
+
+### 2.2 本機開發
+
+Frontend：
 
 ```bash
 cd frontend
@@ -120,7 +42,7 @@ npm install
 npm run dev
 ```
 
-#### Backend
+Backend：
 
 ```bash
 cd backend
@@ -128,7 +50,38 @@ uv sync --dev
 uv run app.py
 ```
 
-## 7. 環境變數
+## 3. 使用指南
+
+1. 開啟首頁 `/`，點擊「開始遊戲」。
+2. 進入遊戲頁後可查看玩家狀態與劇情區塊。
+3. 右上角 Settings 可切換 Dark Mode 與 Debug 模式。
+4. 開啟 Debug 模式後，可看到 Debug 卡片與 Inject Demo Event。
+5. 如需返回首頁，可使用各頁左上角返回按鈕。
+
+## 4. 專案結構
+
+```text
+AI-Adventurer/
+├── frontend/                 # React + Vite 前端
+├── backend/                  # Flask 後端 API
+├── docker-compose.yml        # 前後端開發容器編排
+└── README.md
+```
+
+## 5. 開發指南
+
+- 前端開發請見 [frontend/README.md](frontend/README.md)
+- 後端開發請見 [backend/README.md](backend/README.md)
+
+## 6. 環境變數
+
+### Frontend
+
+| 變數                | 說明              | 預設值                  |
+| ------------------- | ----------------- | ----------------------- |
+| `VITE_API_BASE_URL` | 前端 API 基底網址 | `http://localhost:8000` |
+
+### Backend
 
 | 變數               | 說明                     | 預設值                                        |
 | ------------------ | ------------------------ | --------------------------------------------- |
@@ -140,9 +93,3 @@ uv run app.py
 | `LLM_MODEL`        | 敘事模型名稱（預留）     | `gpt-4.1-mini`                                |
 | `LOG_LEVEL`        | 日誌等級                 | `INFO`                                        |
 | `CORS_ORIGINS`     | 允許前端來源（逗號分隔） | `http://localhost:5173,http://127.0.0.1:5173` |
-
-## 8. 文件導覽
-
-- **README.md**：看整體說明、功能、快速開始、操作方式
-- **spec.md**：看需求邊界、資料契約、限制條件、驗收標準
-- **architecture.md**：看模組切分、資料流、資料夾結構、部署方式、實作策略

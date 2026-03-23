@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import os
 from dataclasses import dataclass
 
@@ -35,12 +33,7 @@ def get_config() -> AppConfig:
     api_base_url = os.getenv("API_BASE_URL", f"http://localhost:{port}")
     edge_gateway_url = os.getenv("EDGE_GATEWAY_URL", "ws://localhost:9000/events")
     llm_model = os.getenv("LLM_MODEL", "gpt-4.1-mini")
-    cors_origins = _split_csv(
-        os.getenv(
-            "CORS_ORIGINS",
-            "http://localhost:5173,http://127.0.0.1:5173",
-        )
-    ) or ["http://localhost:5173", "http://127.0.0.1:5173"]
+    cors_origins = _split_csv(os.getenv("CORS_ORIGINS", "*")) or ["*"]
 
     return AppConfig(
         app_env=app_env,

@@ -1,14 +1,12 @@
-from __future__ import annotations
-
 from flask import Blueprint, request
 
 from app.services.event_service import event_service
 from app.utils.responses import failure, success
 
-events_bp = Blueprint("events", __name__, url_prefix="/api/events")
+bp = Blueprint("events", __name__, url_prefix="/api/events")
 
 
-@events_bp.post("/input")
+@bp.post("/input")
 def ingest_event_input():
     payload = request.get_json(silent=True) or {}
 
@@ -21,7 +19,7 @@ def ingest_event_input():
     return success(event.to_dict(), status_code=201)
 
 
-@events_bp.get("/current")
+@bp.get("/current")
 def current_event():
     event = event_service.current_event()
     if event is None:
@@ -29,7 +27,7 @@ def current_event():
     return success(event.to_dict())
 
 
-@events_bp.get("/history")
+@bp.get("/history")
 def history():
     items = [item.to_dict() for item in event_service.history()]
     return success(items)

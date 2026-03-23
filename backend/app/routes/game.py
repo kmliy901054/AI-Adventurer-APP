@@ -1,15 +1,13 @@
-from __future__ import annotations
-
 from flask import Blueprint, request
 
 from app.services.event_service import event_service
 from app.services.state_store import store
 from app.utils.responses import success
 
-game_bp = Blueprint("game", __name__, url_prefix="/api/game")
+bp = Blueprint("game", __name__, url_prefix="/api/game")
 
 
-@game_bp.post("/start")
+@bp.post("/start")
 def start_game():
     state = store.get_game_state()
     state.story_segment = "The adventure begins."
@@ -21,18 +19,18 @@ def start_game():
     )
 
 
-@game_bp.post("/reset")
+@bp.post("/reset")
 def reset_game():
     store.reset()
     return success({"message": "Game state reset."})
 
 
-@game_bp.get("/state")
+@bp.get("/state")
 def game_state():
     return success(store.get_game_state().to_dict())
 
 
-@game_bp.post("/demo-event")
+@bp.post("/demo-event")
 def demo_event():
     payload = request.get_json(silent=True) or {}
     target_action = str(payload.get("target_action", "stand"))

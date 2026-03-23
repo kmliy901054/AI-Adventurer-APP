@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from app.models import StoryResult
 from app.services.state_store import store
 

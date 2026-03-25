@@ -1,0 +1,7 @@
+# Root environment files
+.env
+.env.local
+.env.*.local
+
+# Keep templates in git
+!.env.example

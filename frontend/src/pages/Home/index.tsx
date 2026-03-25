@@ -42,6 +42,10 @@ export default function Home() {
         <Button className="w-full" size="lg" variant="secondary" asChild>
           <Link to="/how-to-play">玩法說明</Link>
         </Button>
+
+        <Button className="w-full" size="lg" variant="secondary" asChild>
+          <Link to="/llm-test">LLM 測試</Link>
+        </Button>
       </div>
 
       {startGameMutation.error ? (

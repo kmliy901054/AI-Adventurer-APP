@@ -4,6 +4,7 @@ import Home from '@/pages/Home';
 import Game from '@/pages/Game';
 import Calibration from '@/pages/Calibration';
 import HowToPlay from '@/pages/HowToPlay';
+import LlmTest from '@/pages/LlmTest';
 import RootLayout from './components/layout/RootLayout';
 
 function App() {
@@ -16,6 +17,7 @@ function App() {
         <Route path="/game" element={<Game />} />
         <Route path="/calibration" element={<Calibration />} />
         <Route path="/how-to-play" element={<HowToPlay />} />
+        <Route path="/llm-test" element={<LlmTest />} />
       </Route>
 
       {/* 其他路由 */}

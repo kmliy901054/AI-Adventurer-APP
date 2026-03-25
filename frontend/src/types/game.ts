@@ -40,6 +40,23 @@ export interface StoryGeneratePayload {
   template_key?: string;
 }
 
+export interface LlmChatMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
+export interface LlmChatPayload {
+  message?: string;
+  messages?: LlmChatMessage[];
+  model?: string;
+  system_prompt?: string;
+}
+
+export interface LlmChatResult {
+  reply: string;
+  model: string;
+}
+
 export interface ApiEnvelope<T> {
   success: boolean;
   data: T;

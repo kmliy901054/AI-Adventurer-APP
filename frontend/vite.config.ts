@@ -9,6 +9,13 @@ const isDockerDev = process.env.DOCKER_DEV === '1';
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
+    allowedHosts: ['ai-adventurer.rentolly.org'],
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
+    },
     watch: isDockerDev
       ? {
           usePolling: true,

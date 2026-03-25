@@ -1,7 +1,9 @@
 # Root environment files
 .env
+.env.prod
 .env.local
 .env.*.local
 
 # Keep templates in git
 !.env.example
+!.env.prod.example

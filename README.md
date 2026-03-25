@@ -32,7 +32,37 @@ docker compose up --build -d
 docker compose down
 ```
 
-### 2.2 本機開發
+### 2.2 使用 Docker Compose（生產）
+
+1. 建立生產環境檔：
+
+```bash
+copy .env.prod.example .env.prod
+```
+
+2. 編輯 `.env.prod`，至少確認以下變數：
+
+- `OLLAMA_BASE_URL`：你的 Ollama 服務位址（必填）
+- `VITE_API_BASE_URL`：通常留空，走同源 `/api` 反向代理
+
+3. 啟動生產服務：
+
+```bash
+docker compose -f docker-compose.prod.yml --env-file .env.prod up --build -d
+```
+
+啟動後：
+
+- Frontend: http://localhost:18080
+- Backend: http://localhost:18000
+
+停止服務：
+
+```bash
+docker compose -f docker-compose.prod.yml --env-file .env.prod down
+```
+
+### 2.3 本機開發
 
 Frontend：
 

@@ -1,6 +1,6 @@
 import { apiClient } from '@/lib/apiClient';
-import type { ApiEnvelope, GameState } from '@/types/game';
+import type { ApiEnvelope, GameStateSnapshot } from '@/types/game';
 
 export function getGameState() {
-  return apiClient<ApiEnvelope<GameState>>('/api/game/state');
+  return apiClient<ApiEnvelope<GameStateSnapshot>>('/api/game/state');
 }

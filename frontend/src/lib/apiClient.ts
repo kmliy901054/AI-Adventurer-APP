@@ -7,8 +7,7 @@ export interface ApiClientOptions<TBody = unknown> {
   signal?: AbortSignal;
 }
 
-export const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000';
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
 
 function toAbsoluteUrl(path: string) {
   if (path.startsWith('http://') || path.startsWith('https://')) {

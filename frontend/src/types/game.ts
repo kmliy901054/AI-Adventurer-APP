@@ -15,6 +15,11 @@ export interface GameState {
   story_segment: string;
 }
 
+export interface GameStateSnapshot extends GameState {
+  event_end_time: number;
+  server_time: number;
+}
+
 export interface EventInputPayload {
   timestamp: number;
   action_scores: Record<string, number>;

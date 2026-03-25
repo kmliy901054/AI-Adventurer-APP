@@ -3,7 +3,7 @@ from flask import Flask
 from flask_cors import CORS
 
 from app.config import get_config
-from app.routes import system, game, events, story
+from app.routes import events_bp, game_bp, llm_bp, story_bp, system_bp
 
 
 def create_app():
@@ -15,10 +15,11 @@ def create_app():
     CORS(app, resources={r"/api/*": {"origins": config.cors_origins}})
     
     # 註冊藍圖
-    app.register_blueprint(system.bp)
-    app.register_blueprint(game.bp)
-    app.register_blueprint(events.bp)
-    app.register_blueprint(story.bp)
+    app.register_blueprint(system_bp)
+    app.register_blueprint(game_bp)
+    app.register_blueprint(events_bp)
+    app.register_blueprint(llm_bp)
+    app.register_blueprint(story_bp)
 
     return app
 
@@ -28,4 +29,5 @@ app = create_app()
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8000, debug=True)
+    debug = get_config().app_env == "development"
+    app.run(host='0.0.0.0', port=8000, debug=debug)

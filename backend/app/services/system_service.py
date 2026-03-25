@@ -8,6 +8,7 @@ class SystemService:
             "app_env": config.app_env,
             "api_base_url": config.api_base_url,
             "edge_gateway_url": config.edge_gateway_url,
+            "ollama_base_url": config.ollama_base_url,
             "llm_model": config.llm_model,
         }
 

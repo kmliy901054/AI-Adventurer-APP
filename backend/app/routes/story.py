@@ -1,7 +1,7 @@
 from flask import Blueprint, request
 
-from app.services.story_service import story_service
-from app.utils.responses import success
+from app.services import story_service
+from app.utils import success
 
 bp = Blueprint("story", __name__, url_prefix="/api/story")
 

@@ -10,6 +10,8 @@ class AppConfig:
     log_level: str
     api_base_url: str
     edge_gateway_url: str
+    ollama_base_url: str
+    ollama_timeout_s: int
     llm_model: str
     cors_origins: list[str]
 
@@ -32,7 +34,9 @@ def get_config() -> AppConfig:
     log_level = os.getenv("LOG_LEVEL", "INFO").upper()
     api_base_url = os.getenv("API_BASE_URL", f"http://localhost:{port}")
     edge_gateway_url = os.getenv("EDGE_GATEWAY_URL", "ws://localhost:9000/events")
-    llm_model = os.getenv("LLM_MODEL", "gpt-4.1-mini")
+    ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+    ollama_timeout_s = int(os.getenv("OLLAMA_TIMEOUT_S", "120"))
+    llm_model = os.getenv("LLM_MODEL", "qwen3.5:latest")
     cors_origins = _split_csv(os.getenv("CORS_ORIGINS", "*")) or ["*"]
 
     return AppConfig(
@@ -42,6 +46,8 @@ def get_config() -> AppConfig:
         log_level=log_level,
         api_base_url=api_base_url,
         edge_gateway_url=edge_gateway_url,
+        ollama_base_url=ollama_base_url,
+        ollama_timeout_s=ollama_timeout_s,
         llm_model=llm_model,
         cors_origins=cors_origins,
     )

@@ -1,8 +1,7 @@
 from flask import Blueprint, request
 
-from app.services.event_service import event_service
-from app.services.state_store import store
-from app.utils.responses import success
+from app.services import event_service, store
+from app.utils import success
 
 bp = Blueprint("game", __name__, url_prefix="/api/game")
 

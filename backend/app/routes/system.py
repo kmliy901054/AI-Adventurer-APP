@@ -1,7 +1,7 @@
 from flask import Blueprint
 
-from app.services.system_service import system_service
-from app.utils.responses import success
+from app.services import system_service
+from app.utils import success
 
 bp = Blueprint("system", __name__, url_prefix="/api")
 

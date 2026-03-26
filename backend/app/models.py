@@ -4,16 +4,6 @@ from typing import Any
 
 
 @dataclass
-class EdgeInputEvent:
-    timestamp: float
-    action_scores: dict[str, float]
-    stable_action: str | None = None
-
-    def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
-
-
-@dataclass
 class StoryResult:
     story_segment: str
     tone: str
@@ -63,3 +53,45 @@ class GameState:
         payload = asdict(self)
         payload["player_state"] = self.player_state.to_dict()
         return payload
+
+
+@dataclass
+class SkeletonSequence:
+    """骨骼序列數據"""
+    layout: str  # e.g., "mediapipe_pose_33"
+    shape: list[int]  # [T, V, C]
+    frames: list[list[list[float]]]  # T x V x C
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass
+class JetsonFrame:
+    """Jetson Nano 傳送的單幀數據"""
+    timestamp: float
+    source: str
+    frame_id: int
+    action_scores: dict[str, float]
+    stable_action: str
+    confidence: float
+    skeleton_sequence: SkeletonSequence
+    received_at: float = field(default_factory=time)
+
+    def to_dict(self) -> dict[str, Any]:
+        payload = asdict(self)
+        payload["skeleton_sequence"] = self.skeleton_sequence.to_dict()
+        return payload
+
+
+@dataclass
+class JetsonDevice:
+    """Jetson Nano 設備信息"""
+    source: str
+    last_frame_id: int = 0
+    last_active: float = field(default_factory=time)
+    connection_count: int = 0  # 連線次數
+    frame_count: int = 0  # 總幀數
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)

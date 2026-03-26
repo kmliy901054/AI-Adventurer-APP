@@ -1,0 +1,105 @@
+"""WebSocket 配置和事件處理"""
+from app.services.edge_service import edge_service
+from app.utils.logger import get_logger
+
+logger = get_logger(__name__)
+
+try:
+    from flask_socketio import SocketIO, emit, disconnect
+except ImportError:
+    raise ImportError(
+        "flask-socketio is required for WebSocket support. "
+        "Please install it with: pip install flask-socketio"
+    )
+
+
+def init_websocket(app):
+    """初始化 WebSocket 服務"""
+    socketio = SocketIO(
+        app,
+        cors_allowed_origins="*",
+        async_mode="eventlet",
+        ping_timeout=60,
+        ping_interval=25,
+    )
+
+    # WebSocket 事件處理器
+    
+    @socketio.on("connect", namespace="/edge/frames")
+    def handle_connect():
+        """設備連線"""
+        logger.info("Client connected to /edge/frames")
+        emit("response", {"data": "Connected"})
+
+    @socketio.on("disconnect", namespace="/edge/frames")
+    def handle_disconnect():
+        """設備斷開連線"""
+        logger.info("Client disconnected from /edge/frames")
+
+    @socketio.on("frame", namespace="/edge/frames")
+    def handle_frame(data):
+        """接收 Jetson 幀數據"""
+        try:
+            result = edge_service.ingest_frame(data)
+            emit("response", result)
+            
+            # 廣播給所有連線客戶端 (可選)
+            # socketio.emit("frame_broadcast", data, broadcast=True)
+            
+        except Exception as e:
+            logger.error(f"Error handling frame: {e}")
+            emit(
+                "response",
+                {
+                    "success": False,
+                    "message": "Error processing frame",
+                    "error": str(e),
+                },
+            )
+
+    @socketio.on("connect", namespace="/edge/video")
+    def handle_video_connect():
+        """WebRTC 信令連線"""
+        logger.info("Client connected to /edge/video (WebRTC signaling)")
+        emit("response", {"data": "WebRTC signaling channel ready"})
+
+    @socketio.on("disconnect", namespace="/edge/video")
+    def handle_video_disconnect():
+        """WebRTC 信令斷開連線"""
+        logger.info("Client disconnected from /edge/video (WebRTC signaling)")
+
+    @socketio.on("offer", namespace="/edge/video")
+    def handle_offer(data):
+        """處理 WebRTC Offer"""
+        try:
+            logger.debug(f"Received WebRTC offer from {data.get('source')}")
+            # 此處可以轉發給前端或其他客戶端
+            # socketio.emit("offer", data, broadcast=True)
+            emit("response", {"success": True, "message": "Offer received"})
+        except Exception as e:
+            logger.error(f"Error handling offer: {e}")
+            emit("response", {"success": False, "error": str(e)})
+
+    @socketio.on("answer", namespace="/edge/video")
+    def handle_answer(data):
+        """處理 WebRTC Answer"""
+        try:
+            logger.debug(f"Received WebRTC answer from {data.get('source')}")
+            # 此處可以轉發給 Jetson 設備
+            emit("response", {"success": True, "message": "Answer received"})
+        except Exception as e:
+            logger.error(f"Error handling answer: {e}")
+            emit("response", {"success": False, "error": str(e)})
+
+    @socketio.on("candidate", namespace="/edge/video")
+    def handle_candidate(data):
+        """處理 ICE Candidate"""
+        try:
+            logger.debug(f"Received ICE candidate: {data.get('sdpMid')}")
+            # 此處可以轉發 ICE Candidate
+            emit("response", {"success": True, "message": "Candidate received"})
+        except Exception as e:
+            logger.error(f"Error handling candidate: {e}")
+            emit("response", {"success": False, "error": str(e)})
+
+    return socketio

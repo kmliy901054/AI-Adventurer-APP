@@ -1,23 +1,9 @@
-from flask import Blueprint, request
+from flask import Blueprint
 
 from app.services import event_service
-from app.utils import failure, success
+from app.utils import success
 
 bp = Blueprint("events", __name__, url_prefix="/api/events")
-
-
-@bp.post("/input")
-def ingest_event_input():
-    payload = request.get_json(silent=True) or {}
-
-    required = ["timestamp", "action_scores"]
-    missing = [key for key in required if key not in payload]
-    if missing:
-        return failure("Missing required fields", status_code=422, details={"missing": missing})
-
-    event = event_service.ingest_edge_input(payload)
-    event_service.process_game_tick()
-    return success(event.to_dict(), status_code=201)
 
 
 @bp.get("/current")

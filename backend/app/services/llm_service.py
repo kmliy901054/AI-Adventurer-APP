@@ -1,8 +1,11 @@
 from app.config import get_config
-from app.integrations import ollama_client
+from app.integrations import OllamaClient
 
 
 class LLMService:
+    def __init__(self, client: OllamaClient):
+        self._client = client
+
     def chat(self, payload: dict) -> tuple[dict[str, str] | None, dict[str, object] | None]:
         message = str(payload.get("message", "")).strip()
         raw_messages = payload.get("messages")
@@ -40,14 +43,18 @@ class LLMService:
         system_prompt = payload.get("system_prompt")
         selected_system_prompt = str(system_prompt).strip() if system_prompt else None
 
-        reply, upstream_error = ollama_client.chat_detailed(
+        reply, _upstream_error = self._client.chat(
             prompt=message,
             model=selected_model,
             system_prompt=selected_system_prompt,
             messages=message_history or None,
         )
         if not reply:
-            return None, self._map_upstream_error(upstream_error, selected_model)
+            return None, {
+                "code": "llm_unavailable",
+                "status_code": 503,
+                "message": "LLM service unavailable.",
+            }
 
         return (
             {
@@ -57,63 +64,4 @@ class LLMService:
             None,
         )
 
-    def _map_upstream_error(
-        self,
-        error: dict[str, object] | None,
-        model: str,
-    ) -> dict[str, object]:
-        if not error:
-            return {
-                "code": "llm_unavailable",
-                "status_code": 503,
-                "message": "LLM service unavailable.",
-            }
-
-        code = str(error.get("code", "llm_unavailable"))
-        if code == "upstream_timeout":
-            return {
-                "code": "llm_timeout",
-                "status_code": 504,
-                "message": "LLM response timeout.",
-            }
-
-        if code == "upstream_connection_error":
-            return {
-                "code": "llm_connection_error",
-                "status_code": 503,
-                "message": "Unable to reach Ollama service.",
-                "details": {"reason": error.get("reason")},
-            }
-
-        if code == "upstream_http_error":
-            http_status = int(error.get("http_status", 500))
-            if http_status == 404:
-                return {
-                    "code": "model_not_found",
-                    "status_code": 422,
-                    "message": "Specified model is not available on Ollama.",
-                    "details": {"model": model},
-                }
-
-            return {
-                "code": "upstream_http_error",
-                "status_code": 502,
-                "message": "Ollama returned an upstream HTTP error.",
-                "details": {"http_status": http_status},
-            }
-
-        if code in {"upstream_invalid_response", "upstream_empty_response"}:
-            return {
-                "code": "upstream_invalid_response",
-                "status_code": 502,
-                "message": "Ollama returned an invalid response.",
-            }
-
-        return {
-            "code": "llm_unavailable",
-            "status_code": 503,
-            "message": "LLM service unavailable.",
-        }
-
-
-llm_service = LLMService()
+llm_service = LLMService(client=OllamaClient())

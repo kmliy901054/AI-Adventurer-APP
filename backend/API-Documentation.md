@@ -234,147 +234,7 @@ curl -X POST http://localhost:8000/api/game/reset
 curl -X GET http://localhost:8000/api/game/state
 ```
 
-## 6. POST /api/game/demo-event
-
-### Purpose
-
-注入一筆 demo 事件，快速建立可測試的 target action 與 event 狀態。
-
-### Request
-
-- Method: `POST`
-- Path: `/api/game/demo-event`
-- Body (optional):
-
-```json
-{
-  "target_action": "stand",
-  "time_limit_ms": 10000
-}
-```
-
-若未提供，預設：
-
-- `target_action = "stand"`
-- `time_limit_ms = 10000`
-
-### Success
-
-- Status: `201`
-- Body:
-
-```json
-{
-  "success": true,
-  "data": {
-    "message": "Demo event injected.",
-    "event": {
-      "event_id": "f8e3fbe0-6b0d-4f95-b447-8a3a4043dd9a",
-      "target_action": "stand",
-      "time_limit_ms": 10000,
-      "status": "active",
-      "created_at": 1711111111.123
-    },
-    "game_state": {
-      "chapter_id": "chapter-1",
-      "event_id": "f8e3fbe0-6b0d-4f95-b447-8a3a4043dd9a",
-      "target_action": "stand",
-      "time_remaining_ms": 10000,
-      "judge_result": "pending",
-      "player_state": {
-        "hp": 3,
-        "score": 0
-      },
-      "story_segment": "Ready for adventure."
-    }
-  }
-}
-```
-
-### Errors
-
-- 若 `time_limit_ms` 無法轉為整數，可能觸發 `500`。
-- 其他未預期例外可能回傳 `500`。
-
-### Example
-
-```bash
-curl -X POST http://localhost:8000/api/game/demo-event \
-  -H "Content-Type: application/json" \
-  -d '{"target_action":"jump","time_limit_ms":8000}'
-```
-
-## 7. POST /api/events/input
-
-### Purpose
-
-接收 Edge 偵測事件輸入，保存到事件輸入緩衝。
-
-### Request
-
-- Method: `POST`
-- Path: `/api/events/input`
-- Body (required fields):
-
-```json
-{
-  "timestamp": 1711111111.123,
-  "action_scores": {
-    "stand": 0.12,
-    "crouch": 0.05,
-    "jump": 0.83
-  },
-  "stable_action": "jump"
-}
-```
-
-### Success
-
-- Status: `201`
-- Body:
-
-```json
-{
-  "success": true,
-  "data": {
-    "timestamp": 1711111111.123,
-    "action_scores": {
-      "stand": 0.12,
-      "crouch": 0.05,
-      "jump": 0.83
-    },
-    "stable_action": "jump"
-  }
-}
-```
-
-### Errors
-
-- Status: `422`（缺少必要欄位）
-
-```json
-{
-  "success": false,
-  "error": {
-    "message": "Missing required fields",
-    "details": {
-      "missing": ["timestamp", "action_scores"]
-    }
-  }
-}
-```
-
-- 若欄位型別不合法（例如 `timestamp` 無法轉數字），可能觸發 `500`。
-
-### Example
-
-```bash
-curl -X POST http://localhost:8000/api/events/input \
-  -H "Content-Type: application/json" \
-  -d '{"timestamp":1711111111.123,"action_scores":{"jump":0.9},"stable_action":"jump"}'
-```
-
-## 8. GET /api/events/current
+## 6. GET /api/events/current
 
 ### Purpose
 
@@ -423,7 +283,7 @@ curl -X POST http://localhost:8000/api/events/input \
 curl -X GET http://localhost:8000/api/events/current
 ```
 
-## 9. GET /api/events/history
+## 7. GET /api/events/history
 
 ### Purpose
 
@@ -465,7 +325,7 @@ curl -X GET http://localhost:8000/api/events/current
 curl -X GET http://localhost:8000/api/events/history
 ```
 
-## 10. POST /api/story/generate
+## 8. POST /api/story/generate
 
 ### Purpose
 
@@ -516,7 +376,7 @@ curl -X POST http://localhost:8000/api/story/generate \
   -d '{"event_result":"fail","template_key":"chapter1_fail"}'
 ```
 
-## 11. GET /api/story/current
+## 9. GET /api/story/current
 
 ### Purpose
 

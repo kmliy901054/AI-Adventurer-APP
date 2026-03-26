@@ -18,11 +18,7 @@ class OllamaMessage:
 
 
 class OllamaClient:
-    def chat(self, prompt: str, model: str | None = None, system_prompt: str | None = None) -> str | None:
-        reply, _error = self.chat_detailed(prompt=prompt, model=model, system_prompt=system_prompt)
-        return reply
-
-    def chat_detailed(
+    def chat(
         self,
         prompt: str,
         model: str | None = None,
@@ -52,8 +48,6 @@ class OllamaClient:
             "model": model or config.llm_model,
             "messages": request_messages,
             "stream": False,
-            # qwen reasoning models may return only `thinking` with empty `content`.
-            # Disable reasoning output for user-facing chat responses.
             "think": False,
         }
 
@@ -102,6 +96,3 @@ class OllamaClient:
             return None, {"code": "upstream_empty_response"}
 
         return cleaned, None
-
-
-ollama_client = OllamaClient()

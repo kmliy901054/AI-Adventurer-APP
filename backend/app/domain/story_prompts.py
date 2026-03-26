@@ -18,6 +18,12 @@ CHAPTER_PROMPTS: dict[int, str] = {
     ),
 }
 
+CHAPTER_KEYWORDS: dict[int, str] = {
+    1: "開頭是: 你現在獨自探索叢林。環境描述: 潮濕、又餓又渴。任務目標: 找到傳說中藏有寶藏的洞穴。結尾必須是: 就在這一刻...",
+    2: "開頭是: 你踏上叢林河流的大木橋。環境描述: 水聲湍急、橋面濕滑。任務目標: 穩住步伐通過橋段。結尾必須是: 就在這一刻...",
+    3: "開頭是: 你衝入昏暗洞穴。環境描述: 回音急促、壓迫感強烈。任務目標: 在追逐中抵達終點。結尾必須是: 突然...",
+}
+
 LOOP_KEYWORDS: dict[int, str] = {
     1: "開頭是: 你現在獨自探索叢林。環境描述: 潮濕、又餓又渴。任務目標: 找到傳說中藏有寶藏的洞穴。結尾必須是: 就在這一刻...",
     2: "開頭是: 你繼續向前步行。心情描述: 驚訝、緊張。結尾必須是: 就在這一刻...",
@@ -67,3 +73,8 @@ def build_loop_prompt(loop_id: int) -> str:
 def build_keywords_prompt(chapter: int, keywords: str) -> str:
     prompt = CHAPTER_PROMPTS.get(chapter, CHAPTER_PROMPTS[1])
     return f"{prompt}\n{keywords.strip()}".strip()
+
+
+def build_chapter_prompt(chapter: int) -> str:
+    keywords = CHAPTER_KEYWORDS.get(chapter, CHAPTER_KEYWORDS[1])
+    return build_keywords_prompt(chapter=chapter, keywords=keywords)

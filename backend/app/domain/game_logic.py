@@ -3,8 +3,6 @@ from __future__ import annotations
 from random import choice
 from typing import Any
 
-VALID_ACTIONS = {"jump", "crouch", "push", "run_forward", "stand"}
-
 JUNGLE_EVENTS: list[dict[str, Any]] = [
     {
         "id": "event_whip",
@@ -139,22 +137,3 @@ def pick_event(chapter: int) -> dict[str, Any]:
     if not candidates:
         candidates = [item for item in JUNGLE_EVENTS if int(item["chapter"]) == 1]
     return dict(choice(candidates))
-
-
-def infer_player_action(stable_action: str | None, action_scores: dict[str, float]) -> str | None:
-    if stable_action and stable_action in VALID_ACTIONS:
-        return stable_action
-
-    if not action_scores:
-        return None
-
-    action = max(action_scores.items(), key=lambda item: float(item[1]))[0]
-    if action in VALID_ACTIONS:
-        return action
-    return None
-
-
-def evaluate_required_action(required_action: str, player_action: str | None) -> str:
-    if not player_action:
-        return "fail"
-    return "success" if player_action == required_action else "fail"

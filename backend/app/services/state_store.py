@@ -1,13 +1,12 @@
 from threading import Lock
 from time import time
 
-from app.models import EdgeInputEvent, EventRecord, GameState, StoryResult
+from app.models import EventRecord, GameState, StoryResult
 
 
 class InMemoryStore:
     def __init__(self) -> None:
         self._lock = Lock()
-        self._edge_events: list[EdgeInputEvent] = []
         self._event_history: list[EventRecord] = []
         self._current_event: EventRecord | None = None
         self._pending_event_spawn = False
@@ -18,17 +17,6 @@ class InMemoryStore:
             template_key="default_idle",
         )
         self._game_state = GameState()
-
-    def append_edge_input(self, event: EdgeInputEvent) -> None:
-        with self._lock:
-            self._edge_events.append(event)
-            self._edge_events = self._edge_events[-100:]
-
-    def latest_edge_input(self) -> EdgeInputEvent | None:
-        with self._lock:
-            if not self._edge_events:
-                return None
-            return self._edge_events[-1]
 
     def set_current_event(self, event: EventRecord) -> None:
         with self._lock:
@@ -79,7 +67,6 @@ class InMemoryStore:
 
     def reset(self) -> None:
         with self._lock:
-            self._edge_events.clear()
             self._event_history.clear()
             self._current_event = None
             self._pending_event_spawn = False

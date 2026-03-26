@@ -1,8 +1,8 @@
 from uuid import uuid4
 from time import time
 
-from app.domain import evaluate_required_action, infer_player_action, pick_event, resolve_chapter
-from app.models import EdgeInputEvent, EventRecord
+from app.domain import pick_event, resolve_chapter
+from app.models import EventRecord
 from app.services.state_store import store
 
 
@@ -13,59 +13,35 @@ STORY_DISPLAY_SECONDS = 10.0
 class EventService:
     """Central game state machine: story -> event -> result -> next story."""
 
-    def ingest_edge_input(self, payload: dict) -> EdgeInputEvent:
-        event = EdgeInputEvent(
-            timestamp=float(payload["timestamp"]),
-            action_scores=dict(payload["action_scores"]),
-            stable_action=payload.get("stable_action"),
-        )
-        store.append_edge_input(event)
-
-        current = store.get_current_event()
-        if current and current.status == "active":
-            player_action = infer_player_action(event.stable_action, event.action_scores)
-            result = evaluate_required_action(current.target_action, player_action)
-            self._resolve_current_event(result)
-
-        return event
-
-    def create_demo_event(self, target_action: str, time_limit_ms: int = 10000) -> EventRecord:
+    def create_event(self) -> EventRecord:
+        """Create gameplay event only from fixed definitions (JUNGLE_EVENTS), never from LLM."""
         state = store.get_game_state()
         chapter = resolve_chapter(state.chapter_id)
-        event_text = f"前方出現障礙，你必須做出動作：{target_action}。"
-        success_text = "你成功躲過危機，繼續向前推進。"
-        fail_text = "你反應不及而受傷，冒險局勢更加緊張。"
-
-        # 支援 target_action="auto"，依目前章節抽取 notebook 對應事件。
-        if target_action == "auto":
-            event_def = pick_event(chapter)
-            event_text = str(event_def["text"])
-            target_action = str(event_def["required_action"])
-            success_text = str(event_def["success_text"])
-            fail_text = str(event_def["fail_text"])
-            time_limit_ms = int(float(event_def["time_limit"]) * 1000)
-
-        event = EventRecord(
-            event_id=str(uuid4()),
-            chapter=chapter,
-            text=event_text,
-            target_action=target_action,
-            success_text=success_text,
-            fail_text=fail_text,
-            time_limit_ms=time_limit_ms,
-            status="active",
-        )
+        event_def = pick_event(chapter)
+        event = self._build_event_from_definition(chapter, event_def)
         store.set_current_event(event)
         store.clear_event_spawn()
 
         # Event phase starts: expose action/timer to frontend.
         state.event_id = event.event_id
-        state.target_action = target_action
-        state.time_remaining_ms = time_limit_ms
+        state.target_action = event.target_action
+        state.time_remaining_ms = event.time_limit_ms
         state.judge_result = "pending"
         state.story_segment = event.text
 
         return event
+
+    def _build_event_from_definition(self, chapter: int, event_def: dict) -> EventRecord:
+        return EventRecord(
+            event_id=str(uuid4()),
+            chapter=chapter,
+            text=str(event_def["text"]),
+            target_action=str(event_def["required_action"]),
+            success_text=str(event_def["success_text"]),
+            fail_text=str(event_def["fail_text"]),
+            time_limit_ms=int(float(event_def["time_limit"]) * 1000),
+            status="active",
+        )
 
     def get_remaining_time_ms(self) -> int:
         """Return remaining time for active event phase."""
@@ -86,7 +62,7 @@ class EventService:
         self._update_story_phase_countdown(state, current)
 
         if (current is None or current.status == "completed") and store.should_spawn_event():
-            self.create_demo_event(target_action="auto")
+            self.create_event()
             current = store.get_current_event()
 
         if current and current.status == "active":
@@ -136,23 +112,7 @@ class EventService:
         from app.services.story_service import story_service
 
         state = store.get_game_state()
-        chapter = min(3, resolve_chapter(state.chapter_id) + 1)
-        state.chapter_id = f"chapter-{chapter}"
-        result = state.judge_result if state.judge_result in {"success", "fail"} else "fail"
-
-        keywords = (
-            f"上一事件結果: {result}。"
-            f"上一事件目標動作: {current.target_action}。"
-            "請進入下一段劇情並保持緊張節奏。"
-        )
-        story_service.generate(
-            {
-                "chapter": chapter,
-                "event_result": result,
-                "template_key": f"chapter-{chapter}_{result}",
-                "keywords": keywords,
-            }
-        )
+        story_service.generate({"advance_chapter": True})
 
         current.status = "completed"
         state.event_id = None

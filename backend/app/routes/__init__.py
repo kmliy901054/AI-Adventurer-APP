@@ -1,3 +1,4 @@
+from .edge import bp as edge_bp
 from .events import bp as events_bp
 from .game import bp as game_bp
 from .llm import bp as llm_bp
@@ -10,4 +11,5 @@ __all__ = [
 	"events_bp",
 	"llm_bp",
 	"story_bp",
+	"edge_bp",
 ]

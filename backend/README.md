@@ -142,7 +142,9 @@ POST /edge/frames 與 frame 事件會驗證：
 
 - 必要欄位完整性
 - action_scores 格式與數值範圍（0.0-1.0）
-- skeleton_sequence.shape 與 frames 維度一致性
+- pose.points 維度固定 [33, 3]
+- skeleton_sequence.shape 維度固定 [T, 33, 3]
+- skeleton_sequence.frames 與 shape 一致性
 - timestamp、frame_id 類型
 
 ## 10. 測試方式

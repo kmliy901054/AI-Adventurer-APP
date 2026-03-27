@@ -3,6 +3,7 @@
 本文件描述 Jetson Nano 設備與後端的通訊接口。
 
 **架構：**
+
 ```
 Edge (Jetson Nano)
   ├─ WebSocket → action events → Backend (/edge/frames)
@@ -42,23 +43,30 @@ Jetson Nano 設備發送的訊息格式：
   },
   "stable_action": "crouch",
   "confidence": 0.82,
+  "pose": {
+    "points": [
+      [0.512, 0.103, -0.021],
+      [0.438, 0.221, -0.034],
+      [0.587, 0.219, -0.031]
+    ]
+  },
   "skeleton_sequence": {
     "layout": "mediapipe_pose_33",
-    "shape": [16, 33, 4],
+    "shape": [16, 33, 3],
     "frames": [
       [
-        [0.512, 0.103, -0.021, 0.99],
-        [0.438, 0.221, -0.034, 0.98],
-        [0.587, 0.219, -0.031, 0.98],
-        [0.123, 0.456, 0.001, 0.97],
-        [0.234, 0.567, 0.002, 0.96]
+        [0.512, 0.103, -0.021],
+        [0.438, 0.221, -0.034],
+        [0.587, 0.219, -0.031],
+        [0.123, 0.456, 0.001],
+        [0.234, 0.567, 0.002]
       ],
       [
-        [0.511, 0.105, -0.022, 0.99],
-        [0.439, 0.224, -0.035, 0.98],
-        [0.588, 0.221, -0.032, 0.98],
-        [0.122, 0.458, 0.001, 0.97],
-        [0.235, 0.569, 0.002, 0.96]
+        [0.511, 0.105, -0.022],
+        [0.439, 0.224, -0.035],
+        [0.588, 0.221, -0.032],
+        [0.122, 0.458, 0.001],
+        [0.235, 0.569, 0.002]
       ]
     ]
   }
@@ -75,7 +83,14 @@ Jetson Nano 設備發送的訊息格式：
 | `action_scores`     | object | 各動作類別的預測分數（0.0-1.0）      |
 | `stable_action`     | string | 當前穩定判定的動作類別               |
 | `confidence`        | float  | 穩定動作的信心度（0.0-1.0）          |
+| `pose`              | object | 單幀姿態資料（`points` 為 33 x 3）   |
 | `skeleton_sequence` | object | 骨骼序列資料                         |
+
+#### pose 欄位
+
+| 欄位     | 類型  | 說明                        |
+| -------- | ----- | --------------------------- |
+| `points` | array | 單幀關鍵點資料，固定 [33,3] |
 
 #### skeleton_sequence 欄位
 
@@ -88,11 +103,15 @@ Jetson Nano 設備發送的訊息格式：
 **skeleton_sequence.frames 結構：**
 
 - 二維陣列，第一維度代表幀（時序），第二維度代表關鍵點（共 V 個）
-- 每個關鍵點是 4 元素陣列 `[x, y, z, visibility]`：
+- 每個關鍵點是 3 元素陣列 `[x, y, z]`：
   - `x` (float): 標準化水平座標
   - `y` (float): 標準化垂直座標
   - `z` (float): 標準化深度座標
-  - `visibility` (float): 點的可見性／信心度（0.0-1.0）
+
+驗證規則：
+
+- `pose.points` 必須為 [33, 3]
+- `skeleton_sequence.shape` 必須為 [T, 33, 3]
 
 ### Success
 
@@ -115,7 +134,8 @@ Jetson Nano 設備發送的訊息格式：
 - `Invalid JSON`: 傳送的數據格式不是有效 JSON
 - `Missing required field`: 缺少必要欄位（timestamp、source、frame_id、action_scores、stable_action、skeleton_sequence）
 - `Invalid action_scores`: action_scores 不是物件或分數不在 0.0-1.0 範圍
-- `skeleton_sequence format error`: 骨骼序列格式不符（shape 與 frames 長度不一致）
+- `skeleton_sequence format error`: 骨骼序列格式不符（shape 與 frames 長度不一致，或非 [T,33,3]）
+- `pose format error`: 單幀姿態格式不符（非 [33,3]）
 - `Connection timeout`: 長時間無數據傳送
 
 ### Example
@@ -153,11 +173,16 @@ const payload = {
   },
   stable_action: "crouch",
   confidence: 0.82,
+  pose: {
+    points: [
+      /* 33 points of [x,y,z] */
+    ],
+  },
   skeleton_sequence: {
     layout: "mediapipe_pose_33",
-    shape: [16, 33, 4],
+    shape: [16, 33, 3],
     frames: [
-      /* 16 frames of 33 keypoints */
+      /* 16 frames of 33 keypoints, each keypoint is [x,y,z] */
     ],
   },
 };
@@ -217,13 +242,13 @@ socket.send(JSON.stringify(payload));
 
 ### Video Stream Specifications
 
-| 項目 | 規格 | 備註 |
-|------|------|------|
-| **Codec** | H.264 / VP9 | 建議 H.264 |
-| **Resolution** | 1280×720 或 1920×1080 | 可根據帶寬調整 |
-| **Frame Rate** | 30 fps | 標準影片幀率 |
-| **Bitrate** | 2-5 Mbps | 取決於解析度和品質 |
-| **Latency** | < 500ms | 端到端延遲目標 |
+| 項目           | 規格                  | 備註               |
+| -------------- | --------------------- | ------------------ |
+| **Codec**      | H.264 / VP9           | 建議 H.264         |
+| **Resolution** | 1280×720 或 1920×1080 | 可根據帶寬調整     |
+| **Frame Rate** | 30 fps                | 標準影片幀率       |
+| **Bitrate**    | 2-5 Mbps              | 取決於解析度和品質 |
+| **Latency**    | < 500ms               | 端到端延遲目標     |
 
 ### Success
 
@@ -253,8 +278,8 @@ socket.send(JSON.stringify(payload));
 const peerConnection = new RTCPeerConnection({
   iceServers: [
     { urls: "stun:stun.l.google.com:19302" },
-    { urls: "stun:stun1.l.google.com:19302" }
-  ]
+    { urls: "stun:stun1.l.google.com:19302" },
+  ],
 });
 
 const signalingSocket = new WebSocket("ws://localhost:8000/edge/video");
@@ -269,36 +294,38 @@ peerConnection.ontrack = (event) => {
 // 處理 ICE Candidates
 peerConnection.onicecandidate = (event) => {
   if (event.candidate) {
-    signalingSocket.send(JSON.stringify({
-      type: "candidate",
-      candidate: event.candidate.candidate,
-      sdpMLineIndex: event.candidate.sdpMLineIndex,
-      sdpMid: event.candidate.sdpMid
-    }));
+    signalingSocket.send(
+      JSON.stringify({
+        type: "candidate",
+        candidate: event.candidate.candidate,
+        sdpMLineIndex: event.candidate.sdpMLineIndex,
+        sdpMid: event.candidate.sdpMid,
+      }),
+    );
   }
 };
 
 // 接收 Offer 並發送 Answer
 signalingSocket.onmessage = async (event) => {
   const message = JSON.parse(event.data);
-  
+
   if (message.type === "offer") {
     await peerConnection.setRemoteDescription(
-      new RTCSessionDescription(message)
+      new RTCSessionDescription(message),
     );
-    
+
     const answer = await peerConnection.createAnswer();
     await peerConnection.setLocalDescription(answer);
-    
-    signalingSocket.send(JSON.stringify({
-      type: "answer",
-      sdp: answer.sdp
-    }));
+
+    signalingSocket.send(
+      JSON.stringify({
+        type: "answer",
+        sdp: answer.sdp,
+      }),
+    );
   } else if (message.type === "candidate") {
     try {
-      await peerConnection.addIceCandidate(
-        new RTCIceCandidate(message)
-      );
+      await peerConnection.addIceCandidate(new RTCIceCandidate(message));
     } catch (error) {
       console.error("Error adding ICE candidate:", error);
     }
@@ -370,11 +397,11 @@ class JetsonVideoClient:
         # 接收訊息
         async for message in self.ws:
             data = json.loads(message)
-            
+
             if data["type"] == "answer":
                 answer = RTCSessionDescription(sdp=data["sdp"], type="answer")
                 await self.pc.setRemoteDescription(answer)
-            
+
             elif data["type"] == "candidate":
                 candidate = RTCIceCandidate(
                     candidate=data["candidate"],

@@ -67,6 +67,15 @@ class SkeletonSequence:
 
 
 @dataclass
+class PosePoints:
+    """單幀姿態點位（33 x 3）"""
+    points: list[list[float]]  # 33 x 3
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass
 class JetsonFrame:
     """Jetson Nano 傳送的單幀數據"""
     timestamp: float
@@ -76,11 +85,20 @@ class JetsonFrame:
     stable_action: str
     confidence: float
     skeleton_sequence: SkeletonSequence
+    pose: PosePoints | None = None
     received_at: float = field(default_factory=time)
 
     def to_dict(self) -> dict[str, Any]:
         payload = asdict(self)
         payload["skeleton_sequence"] = self.skeleton_sequence.to_dict()
+        payload["pose"] = self.pose.to_dict() if self.pose else None
+        payload["latest_pose"] = (
+            self.pose.points
+            if self.pose
+            else self.skeleton_sequence.frames[-1]
+            if self.skeleton_sequence.frames
+            else []
+        )
         return payload
 
 

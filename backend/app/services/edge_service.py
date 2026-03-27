@@ -2,7 +2,7 @@
 from time import time
 from typing import Any
 
-from app.models import JetsonDevice, JetsonFrame, SkeletonSequence
+from app.models import JetsonDevice, JetsonFrame, PosePoints, SkeletonSequence
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -95,7 +95,7 @@ class EdgeService:
                     "error": str(e),
                 }
 
-            # 驗證 shape 與 frames 一致
+            # 驗證 shape 與 frames 一致，且固定為 V=33、C=3
             if len(skeleton.shape) != 3:
                 return {
                     "success": False,
@@ -111,6 +111,50 @@ class EdgeService:
                     "error": f"frames length {len(skeleton.frames)} != T {t}",
                 }
 
+            if v != 33 or c != 3:
+                return {
+                    "success": False,
+                    "message": "skeleton_sequence format error",
+                    "error": f"shape must be [T, 33, 3], got {skeleton.shape}",
+                }
+
+            for frame_index, frame_points in enumerate(skeleton.frames):
+                if len(frame_points) != 33:
+                    return {
+                        "success": False,
+                        "message": "skeleton_sequence format error",
+                        "error": f"frame[{frame_index}] points length must be 33, got {len(frame_points)}",
+                    }
+                for point_index, point in enumerate(frame_points):
+                    if not isinstance(point, list) or len(point) != 3:
+                        return {
+                            "success": False,
+                            "message": "skeleton_sequence format error",
+                            "error": f"frame[{frame_index}][{point_index}] must be [x, y, z]",
+                        }
+
+            pose_data = payload.get("pose") or {}
+            pose_points = pose_data.get("points") if isinstance(pose_data, dict) else None
+            if pose_points is None:
+                pose_points = skeleton.frames[-1] if skeleton.frames else []
+
+            if not isinstance(pose_points, list) or len(pose_points) != 33:
+                return {
+                    "success": False,
+                    "message": "pose format error",
+                    "error": f"pose.points must be 33 points, got {len(pose_points) if isinstance(pose_points, list) else 'invalid'}",
+                }
+
+            for point_index, point in enumerate(pose_points):
+                if not isinstance(point, list) or len(point) != 3:
+                    return {
+                        "success": False,
+                        "message": "pose format error",
+                        "error": f"pose.points[{point_index}] must be [x, y, z]",
+                    }
+
+            pose = PosePoints(points=pose_points)
+
             # 構建 JetsonFrame
             frame = JetsonFrame(
                 timestamp=float(payload["timestamp"]),
@@ -120,6 +164,7 @@ class EdgeService:
                 stable_action=str(payload["stable_action"]),
                 confidence=float(payload["confidence"]),
                 skeleton_sequence=skeleton,
+                pose=pose,
             )
 
             # 註冊設備和更新狀態

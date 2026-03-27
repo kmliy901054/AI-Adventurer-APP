@@ -11,6 +11,26 @@ import { API_BASE_URL } from '@/lib/apiClient';
 const maxHp = 3;
 const VIDEO_NAMESPACE = '/edge/video';
 const FRONTEND_SOURCE = 'frontend-preview';
+const POSE_CONNECTIONS: Array<[number, number]> = [
+  [11, 12],
+  [11, 13],
+  [13, 15],
+  [12, 14],
+  [14, 16],
+  [11, 23],
+  [12, 24],
+  [23, 24],
+  [23, 25],
+  [25, 27],
+  [27, 29],
+  [29, 31],
+  [24, 26],
+  [26, 28],
+  [28, 30],
+  [30, 32],
+];
+
+type PosePoint = [number, number, number];
 
 function getSocketBaseUrl() {
   const fromEnv = import.meta.env.VITE_SOCKET_BASE_URL as string | undefined;
@@ -40,6 +60,8 @@ export default function Game() {
   const socketRef = useRef<Socket | null>(null);
   const peerRef = useRef<RTCPeerConnection | null>(null);
   const remoteStreamRef = useRef<MediaStream | null>(null);
+  const skeletonCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [latestPose, setLatestPose] = useState<PosePoint[] | null>(null);
   const [previewStatus, setPreviewStatus] = useState(
     '等待 Jetson 影像來源連線...'
   );
@@ -128,6 +150,148 @@ export default function Game() {
     }, 100);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    let aborted = false;
+
+    const pullLatestPose = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/edge/frames/latest`);
+        if (!response.ok) {
+          return;
+        }
+        const payload = (await response.json()) as {
+          data?: {
+            frames?: Record<string, { latest_pose?: number[][] }>;
+          };
+        };
+
+        const frames = payload?.data?.frames;
+        if (!frames) {
+          return;
+        }
+
+        const firstFrame = Object.values(frames)[0];
+        const pose = firstFrame?.latest_pose;
+        if (!aborted && Array.isArray(pose)) {
+          setLatestPose(pose as PosePoint[]);
+        }
+      } catch {
+        // 靜默處理輪詢錯誤，避免打斷遊戲流程。
+      }
+    };
+
+    void pullLatestPose();
+    const timer = window.setInterval(() => {
+      void pullLatestPose();
+    }, 350);
+
+    return () => {
+      aborted = true;
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  useEffect(() => {
+    const canvas = skeletonCanvasRef.current;
+    const video = videoRef.current;
+    if (!canvas) {
+      return;
+    }
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      return;
+    }
+
+    const width = canvas.clientWidth;
+    const height = canvas.clientHeight;
+    if (width <= 0 || height <= 0) {
+      return;
+    }
+
+    if (canvas.width !== width || canvas.height !== height) {
+      canvas.width = width;
+      canvas.height = height;
+    }
+
+    ctx.clearRect(0, 0, width, height);
+
+    // 將骨架映射到影片實際可見區域（object-contain 會有 letterbox）。
+    const getVideoDrawRect = () => {
+      if (!video || video.videoWidth <= 0 || video.videoHeight <= 0) {
+        return { x: 0, y: 0, w: width, h: height };
+      }
+
+      const videoAspect = video.videoWidth / video.videoHeight;
+      const canvasAspect = width / height;
+
+      if (videoAspect > canvasAspect) {
+        const w = width;
+        const h = width / videoAspect;
+        return { x: 0, y: (height - h) / 2, w, h };
+      }
+
+      const h = height;
+      const w = height * videoAspect;
+      return { x: (width - w) / 2, y: 0, w, h };
+    };
+
+    const videoRect = getVideoDrawRect();
+
+    if (!latestPose || latestPose.length !== 33) {
+      return;
+    }
+
+    const validPoint = (point?: PosePoint) => {
+      if (!point || point.length !== 3) {
+        return false;
+      }
+      const [x, y, z] = point;
+      // 全 0 點視為沒抓到，前端繪製時忽略。
+      if (x === 0 && y === 0 && z === 0) {
+        return false;
+      }
+      return true;
+    };
+
+    ctx.strokeStyle = 'rgba(34, 197, 94, 0.9)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (const [a, b] of POSE_CONNECTIONS) {
+      const pa = latestPose[a];
+      const pb = latestPose[b];
+      if (!validPoint(pa) || !validPoint(pb)) {
+        continue;
+      }
+
+      ctx.moveTo(
+        videoRect.x + pa[0] * videoRect.w,
+        videoRect.y + pa[1] * videoRect.h
+      );
+      ctx.lineTo(
+        videoRect.x + pb[0] * videoRect.w,
+        videoRect.y + pb[1] * videoRect.h
+      );
+    }
+    ctx.stroke();
+
+    ctx.fillStyle = 'rgba(34, 197, 94, 0.95)';
+    for (const point of latestPose) {
+      if (!validPoint(point)) {
+        continue;
+      }
+      ctx.beginPath();
+      ctx.arc(
+        videoRect.x + point[0] * videoRect.w,
+        videoRect.y + point[1] * videoRect.h,
+        3,
+        0,
+        Math.PI * 2
+      );
+      ctx.fill();
+    }
+  }, [latestPose]);
 
   useEffect(() => {
     if (!gameState) {
@@ -372,7 +536,11 @@ export default function Game() {
                 autoPlay
                 playsInline
                 muted
-                className="relative z-10 h-full w-full object-cover"
+                className="relative z-10 h-full w-full object-contain"
+              />
+              <canvas
+                ref={skeletonCanvasRef}
+                className="pointer-events-none absolute inset-0 z-20 h-full w-full"
               />
               <div className="pointer-events-none absolute inset-x-4 bottom-4 z-20 rounded-md border border-border/70 bg-background/75 px-3 py-2 text-xs backdrop-blur">
                 <p className="font-medium text-foreground">
